@@ -8,6 +8,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(SOURCES
     src/Video2AudioPlayer.cpp
     manifest/MyImageApplication.rc
+        src/DCTCompressor.cpp
 )
 
 if(WIN32)
