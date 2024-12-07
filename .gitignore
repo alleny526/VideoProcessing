@@ -1,0 +1,6 @@
+/.vscode
+/build
+/README.txt
+/src2
+*.rgb
+*.wav
