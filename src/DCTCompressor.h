@@ -10,6 +10,7 @@ public:
     static constexpr int DCT_SIZE = 8;
     static double DCT_MATRIX[DCT_SIZE][DCT_SIZE];
     static double DCT_MATRIX_TRANSPOSE[DCT_SIZE][DCT_SIZE];
+    static std::string COMPRESSED_FILE_NAME;
 
     /**
      * Compresses the input data using DCT.
@@ -23,10 +24,9 @@ public:
 
     /**
      * Decompresses the input data using DCT.
-     * @param inData The input data to decompress.
      * @return The decompressed rgb files.
      */
-    unsigned char *Decompress(unsigned char *inData);
+    static unsigned char **Decompress();
 
 private:
     DCTCompressor();
@@ -34,6 +34,7 @@ private:
     static int *DCTLocalCompressor(int blocks[DCT_SIZE][DCT_SIZE], int quality);
 
     static int (*DCTLocalDecompressor (const int *compressed_local_data, int quality))[DCT_SIZE];
+
 };
 
 #endif //DCTCOMPRESSOR_H

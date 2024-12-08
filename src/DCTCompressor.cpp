@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <fstream>
+#include <sstream>
 
 void ConvertIntToDouble(const int intArray[DCTCompressor::DCT_SIZE][DCTCompressor::DCT_SIZE], double doubleArray[DCTCompressor::DCT_SIZE][DCTCompressor::DCT_SIZE]) {
     for (int i = 0; i < DCTCompressor::DCT_SIZE; ++i) {
@@ -107,7 +108,7 @@ int (*DCTCompressor::DCTLocalDecompressor(const int *compressed_local_data, cons
 // r g b r g b r g b … r g b (The bottom blocks that cannot divided by 8)
 void DCTCompressor::Compress(const std::vector<unsigned char> &data, int foreground_quality, int background_quality, const bool *identifier) {
     std::ofstream output_file;
-    output_file.open("compressed_data.txt", std::ios::app);
+    output_file.open(COMPRESSED_FILE_NAME, std::ios::app);
 
     int vertical_block_num = HEIGHT / DCT_SIZE;
     int horizontal_block_num = WIDTH / DCT_SIZE;
@@ -144,7 +145,65 @@ void DCTCompressor::Compress(const std::vector<unsigned char> &data, int foregro
 }
 
 // format of rgb file: rgbrgbrgbrgb…
-unsigned char *DCTCompressor::Decompress(unsigned char *inData) {
+unsigned char **DCTCompressor::Decompress() {
+    // Read the compressed data
+    std::ifstream input_file;
+    input_file.open(COMPRESSED_FILE_NAME);
+
+    // Read each line of the file
+    std::string line;
+    std::vector<std::vector<int>> compressed_data;
+    while (std::getline(input_file, line)) {
+        std::istringstream iss(line);
+        std::vector<int> data;
+        int num;
+        while (iss >> num) {
+            data.push_back(num);
+        }
+        compressed_data.push_back(data);
+    }
+
+    // Initialize the result
+    const int lines_per_frame = WIDTH * HEIGHT / DCT_SIZE / DCT_SIZE + 1;
+    const int frame_num = compressed_data.size() / lines_per_frame;
+    std::unique_ptr<unsigned char*[]> result = std::make_unique<unsigned char*[]>(frame_num);
+    for (int i = 0; i < frame_num; ++i) {
+        result[i] = new unsigned char[WIDTH * HEIGHT * 3];
+    }
+
+    // Decompress the data
+    int horizontal_block_num = WIDTH / DCT_SIZE;
+    int vertical_block_num = HEIGHT / DCT_SIZE;
+    int blocks[DCT_SIZE * DCT_SIZE];
+    for (int i = 0; i < frame_num; i++) {
+        for (int j = 0; j < lines_per_frame - 1; j++) {
+            int *line = compressed_data[i * lines_per_frame + j].data();
+            int quality = line[0];
+            int base_idx = j / horizontal_block_num * WIDTH * DCT_SIZE + (j % horizontal_block_num) * DCT_SIZE;
+            for (int k = 0; k < 3; k++) {
+                for (int l = 0; l < DCT_SIZE * DCT_SIZE; l++) {
+                    for (int m = 0; m < DCT_SIZE * DCT_SIZE; m++) {
+                        blocks[m] = line[1 + k * DCT_SIZE * DCT_SIZE + m];
+                    }
+                    int (*decompressed_data)[DCT_SIZE] = DCTLocalDecompressor(blocks, quality);
+                    for (int m = 0; m < DCT_SIZE; m++) {
+                        for (int n = 0; n < DCT_SIZE; n++) {
+                            result[i][(base_idx + m * WIDTH + n) * 3 + k] = static_cast<unsigned char>(decompressed_data[m][n]);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Read the bottom blocks that cannot divided by 8
+        int *line = compressed_data[i * lines_per_frame + lines_per_frame].data();
+        int base_idx = vertical_block_num * DCT_SIZE * WIDTH * 3;
+        for (int j = 0; j < HEIGHT * WIDTH * 3 - base_idx; j++) {
+            result[i][j + base_idx] = static_cast<unsigned char>(line[j]);
+        }
+    }
+
+    return result.get();
 }
 
 
