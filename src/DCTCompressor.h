@@ -26,10 +26,9 @@ public:
 
     /**
      * Decompresses the input data using DCT.
-     * @param result The decompressed rgb files to memory. Initialize the vector as empty.
      * @return The decompressed rgb files to memory.
      */
-    void Decompress(std::vector<std::vector<unsigned char>> &result);
+    void Decompress(std::string file_name);
 
 private:
     // Compress a single 8*8 block of data.

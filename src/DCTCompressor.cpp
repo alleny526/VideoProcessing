@@ -150,7 +150,7 @@ void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool 
 }
 
 // format of rgb file: rgbrgbrgbrgb…
-void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result) {
+void DCTCompressor::Decompress(std::string file_name) {
     // Read the compressed data
     std::ifstream input_file;
     input_file.open(COMPRESSED_FILE_NAME);
@@ -169,6 +169,7 @@ void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result) 
     }
 
     // Initialize the result
+    std::vector<std::vector<unsigned char>> result;
     int lines_per_frame = WIDTH / DCT_SIZE * (HEIGHT / DCT_SIZE) + 1;
     int frame_num = compressed_data.size() / lines_per_frame;
     for (int i = 0; i < frame_num; i++) {
@@ -204,6 +205,15 @@ void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result) 
         int base_idx = vertical_block_num * DCT_SIZE * WIDTH * 3;
         for (int j = 0; j < HEIGHT * WIDTH * 3 - base_idx; j++) {
             result[i][j + base_idx] = static_cast<unsigned char>(line[j]);
+        }
+    }
+
+    // Write the result to the file
+    std::ofstream output_file;
+    output_file.open(file_name);
+    for (int i = 0; i < frame_num; i++) {
+        for (int j = 0; j < HEIGHT * WIDTH * 3; j++) {
+            output_file << result[i][j];
         }
     }
 

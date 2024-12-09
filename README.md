@@ -33,14 +33,15 @@ r g b r g b r g b … r g b (The bottom blocks that cannot be divided by 8)
 Decompress the compressed data from file ```compressed_data.txt```.
 
 ``` cpp
-void Decompress(std::vector<std::vector<unsigned char>> &result);
+void Decompress(std::string file_name);
 ```
 
-- result: should be an empty vector, the decompressed data will be stored in this vector after calling this method. ```result[i]``` is the i-th frame of the decompressed data.
+- file_name: the file to store the output rgb data.
 
 The decompressed data will be stored in the same format as the input data, ie, 
 ```aiignore
 result[i] = {r1, g1, b1, r2, g2, b2, …, rN, gN, bN}
 ```
 
+Finally, you can use the Video player to play the rgb file.
 
