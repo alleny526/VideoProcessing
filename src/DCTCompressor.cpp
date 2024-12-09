@@ -110,7 +110,7 @@ void DCTCompressor::DCTLocalDecompressor(const int *compressed_local_data, const
 // quantization_factor coeff1 coeff2 … coeff64 coeff1 coeff2 … coeff64 coeff1 coeff2 … coeff64
 // …
 // r g b r g b r g b … r g b (The bottom blocks that cannot divided by 8)
-void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool *identifier, int foreground_compress_factor, int background_compress_factor) {
+void DCTCompressor::Compress(unsigned char *data, const bool *identifier, int foreground_compress_factor, int background_compress_factor) {
     std::ofstream output_file;
     output_file.open(COMPRESSED_FILE_NAME, std::ios::app);
 

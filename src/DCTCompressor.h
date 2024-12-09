@@ -22,7 +22,7 @@ public:
      * @param identifier The identifier of foreground or background. 0 for background, 1 for foreground.
      * generate the compressed data file.
      */
-    void Compress(const std::vector<unsigned char> &data, const bool *identifier, int foreground_compress_factor, int background_compress_factor);
+    void Compress(unsigned char *data, const bool *identifier, int foreground_compress_factor, int background_compress_factor);
 
     /**
      * Decompresses the input data using DCT.
