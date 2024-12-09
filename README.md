@@ -26,13 +26,29 @@ int main() {
 
 ```cpp
 # include "DCTCompressor.h"
+# include <cstdlib>
+# include <iostream>
 
-int main() {
+int main(int argc, char* argv[]) {
     DCTCompressor compressor;
     compressor.Decompress("output.rgb");  // decompressed vedio stored in output.rgb in the format suitable for the player.
     
     // Code to call the player to play output.rgb
-    // ...
+    // Construct command to play decoded video
+    // argv[1] = sample_file.rgb
+    // argv[2] = sample_audio.wav
+    std::string play_command = "./MyImageApplication " + argv[1] +
+                                " output.rgb" + argv[2] + " 960 540 30";
+    
+    std::cout << "Decompressing and preparing to play: " << play_command << std::endl;
+    
+    // Execute the video player with decoded file
+    int result = system(play_command.c_str());
+    
+    if (result != 0) {
+        std::cerr << "Failed to play decoded video" << std::endl;
+        return 1;
+    }
     
     return 0;
 }
