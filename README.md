@@ -1,3 +1,43 @@
+## Encoder Template
+
+```cpp
+# include "DCTCompressor.h"
+
+int main() {
+    int n1, n2;  // read from the command line
+    
+    int frame_number;  // compute number of frames
+    
+    unsigned char **data = ReadImageFromAllen("input.rgb");  // data[i] is the i-th frame
+    
+    bool **identifier = SegmentFromCheng(data);  // read raw data and return the foreground/background identifier
+    
+    DCTCompressor compressor;
+
+    for (int i = 0; i < frame_number; i++) {
+        compressor.Compress(data[i], identifier[i], n1, n2);  // compress the i-th frame with n1 and n2
+    }
+    
+    return 0;
+}
+```
+
+## Decoder Template
+
+```cpp
+# include "DCTCompressor.h"
+
+int main() {
+    DCTCompressor compressor;
+    compressor.Decompress("output.rgb");  // decompressed vedio stored in output.rgb in the format suitable for the player.
+    
+    // Code to call the player to play output.rgb
+    // ...
+    
+    return 0;
+}
+```
+
 ## DCTCompressor Class
 
 To use the DCTCompressor class, you need to create its instance and use it.
