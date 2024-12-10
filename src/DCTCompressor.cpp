@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
 // const std::string DCTCompressor::COMPRESSED_FILE_NAME = "compressed_data.txt";
 double dct_matrix[DCTCompressor::DCT_SIZE][DCTCompressor::DCT_SIZE];
@@ -130,7 +131,8 @@ void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool 
             for (int k = 0; k < 3; k++) {
                 for (int l = 0; l < DCT_SIZE; l++) {
                     for (int m = 0; m < DCT_SIZE; m++) {
-                        blocks[l][m] = static_cast<int>(data[(base_idx + WIDTH * l + m) * 3 + k]);
+//                        blocks[l][m] = static_cast<int>(data[(base_idx + WIDTH * l + m) * 3 + k]);
+                        blocks[l][m] = identifier[i * horizontal_block_num + j] ? 200 : 20; // foreground更亮，background更黑
                     }
                 }
                 DCTLocalCompressor(blocks, compress_factor, compressed_data);
@@ -150,40 +152,14 @@ void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool 
     output_file << std::endl;
 }
 
-// format of rgb file: rgbrgbrgbrgb…
-void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result, std::string COMPRESSED_FILE_NAME) {
-    // Read the compressed data
-    std::ifstream input_file;
-    input_file.open(COMPRESSED_FILE_NAME);
-
-    // Read each line of the file
-    std::string line;
-    std::vector<std::vector<int>> compressed_data;
-    while (std::getline(input_file, line)) {
-        std::istringstream iss(line);
-        std::vector<int> data;
-        int num;
-        while (iss >> num) {
-            data.push_back(num);
-        }
-        compressed_data.push_back(data);
-    }
-
-    // Initialize the result
-    int lines_per_frame = WIDTH / DCT_SIZE * (HEIGHT / DCT_SIZE) + 1;
-    int frame_num = compressed_data.size() / lines_per_frame;
-    for (int i = 0; i < frame_num; i++) {
-        result.push_back(std::vector<unsigned char>(HEIGHT * WIDTH * 3));
-    }
-
-    // Decompress the data
-    int horizontal_block_num = WIDTH / DCT_SIZE;
-    int vertical_block_num = HEIGHT / DCT_SIZE;
-    int blocks[DCT_SIZE * DCT_SIZE];
-    int decompressed_data[DCT_SIZE][DCT_SIZE];
-    for (int i = 0; i < frame_num; i++) {
+void DCTCompressor::DecompressFrameThread(int i, int total_frame_num, std::vector<std::vector<unsigned char>> &result, std::vector<std::vector<int>> &compressed_data, int lines_per_frame) {
+    for (int frame_id = i; frame_id < total_frame_num; frame_id += std::thread::hardware_concurrency()) {
+        int horizontal_block_num = WIDTH / DCT_SIZE;
+        int vertical_block_num = HEIGHT / DCT_SIZE;
+        int blocks[DCT_SIZE * DCT_SIZE];
+        int decompressed_data[DCT_SIZE][DCT_SIZE];
         for (int j = 0; j < lines_per_frame - 1; j++) {
-            std::vector<int> line = compressed_data[i * lines_per_frame + j];
+            std::vector<int> line = compressed_data[frame_id * lines_per_frame + j];
             int compress_factor = line[0];
             int base_idx = (j / horizontal_block_num) * WIDTH * DCT_SIZE + (j % horizontal_block_num) * DCT_SIZE;
             for (int k = 0; k < 3; k++) {
@@ -194,18 +170,64 @@ void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result, 
                     DCTLocalDecompressor(blocks, compress_factor, decompressed_data);
                     for (int m = 0; m < DCT_SIZE; m++) {
                         for (int n = 0; n < DCT_SIZE; n++) {
-                            result[i][(base_idx + m * WIDTH + n) * 3 + k] = static_cast<unsigned char>(decompressed_data[m][n]);
+                            result[frame_id][(base_idx + m * WIDTH + n) * 3 + k] = static_cast<unsigned char>(decompressed_data[m][n]);
                         }
                     }
                 }
             }
         }
+
         // Read the bottom blocks that cannot divided by 8
-        std::vector<int> line = compressed_data[i * lines_per_frame + lines_per_frame - 1];
+        std::vector<int> line = compressed_data[frame_id * lines_per_frame + lines_per_frame - 1];
         int base_idx = vertical_block_num * DCT_SIZE * WIDTH * 3;
         for (int j = 0; j < HEIGHT * WIDTH * 3 - base_idx; j++) {
-            result[i][j + base_idx] = static_cast<unsigned char>(line[j]);
+            result[frame_id][j + base_idx] = static_cast<unsigned char>(line[j]);
         }
+    }
+    std::cout << "Thread " << i << " finished" << std::endl;
+}
+
+// format of rgb file: rgbrgbrgbrgb…
+void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result, std::string COMPRESSED_FILE_NAME) {
+    // Read the compressed data
+    std::ifstream input_file;
+    input_file.open(COMPRESSED_FILE_NAME);
+
+    // Read each line of the file
+    std::string line;
+    std::vector<std::vector<int>> compressed_data;
+    int cnt  = 0;
+    while (std::getline(input_file, line)) {
+        std::istringstream iss(line);
+        std::vector<int> data;
+        int num;
+        while (iss >> num) {
+            data.push_back(num);
+        }
+        compressed_data.push_back(data);
+        cnt += 1;
+        if (cnt % 100000 == 0) std::cout << cnt << " lines read" << std::endl;
+    }
+    std::cout << "Finish reading" << std::endl;
+
+    // Initialize the result
+    int lines_per_frame = WIDTH / DCT_SIZE * (HEIGHT / DCT_SIZE) + 1;
+    int frame_num = compressed_data.size() / lines_per_frame;
+    for (int i = 0; i < frame_num; i++) {
+        result.push_back(std::vector<unsigned char>(HEIGHT * WIDTH * 3));
+    }
+
+    const int threads_num = std::thread::hardware_concurrency();
+    std::vector<std::thread> threads;
+    for (int i = 0; i < threads_num; ++i) {
+        threads.emplace_back([this, i, frame_num, &result, &compressed_data, lines_per_frame]() {
+            this->DecompressFrameThread(i, frame_num, result, compressed_data, lines_per_frame);
+        });
+    }
+
+    // Decompress the data
+    for (auto& t : threads) {
+        t.join();
     }
 
     return;

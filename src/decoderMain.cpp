@@ -2,10 +2,6 @@
 // Created by jiec on 2024/12/9.
 //
 
-//
-// Created by jiec on 2024/12/9.
-//
-
 // outer
 #include <vector>
 #include <iostream>
@@ -44,12 +40,17 @@ void decoderMain(const std::vector<std::vector<unsigned char>>& result, const st
 
 int main() {
     // 假设输入和输出文件
-    std::string ROOT_DIRECTORY = "../assets/rgbs/";
-    // std::string ROOT_DIRECTORY = "../assets/";
-    std::string NAME = ROOT_DIRECTORY + "WalkingStaticBackground";
-    std::string OUTPUTNAME = ROOT_DIRECTORY + "PROCESSED_" + "WalkingStaticBackground";
-    std::string inputFile = NAME + ".cmp";
-    std::string outputFile = OUTPUTNAME + ".rgb";
+//    const std::string VIDEO_NAME = "WalkingStaticBackground";
+//    const std::string VIDEO_NAME = "WalkingMovingBackground";
+//    const std::string VIDEO_NAME = "SAL";
+//    const std::string VIDEO_NAME = "Stairs";
+//    const std::string VIDEO_NAME = "Village";
+//    const std::string VIDEO_NAME = "orange";
+    const std::string VIDEO_NAME = "car";
+
+    std::string ROOT_DIRECTORY = "../assets/outputs/";
+    std::string inputFile = ROOT_DIRECTORY + VIDEO_NAME + ".cmp";
+    std::string outputFile = ROOT_DIRECTORY + "PROCESSED_" + VIDEO_NAME + ".rgb";
 
     // 图像的宽度和高度
     int width = 960;
