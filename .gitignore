@@ -5,3 +5,4 @@
 /cmake-build-debug
 *.rgb
 *.wav
+*.cmp

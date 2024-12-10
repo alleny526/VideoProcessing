@@ -22,6 +22,11 @@ set(DECODERSOURCES
         src/decoderMain.cpp
 )
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+
 if(WIN32)
     set(wxBUILD_SHARED OFF)
     # Add these lines to resolve linking conflicts
