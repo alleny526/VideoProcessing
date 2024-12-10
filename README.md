@@ -1,3 +1,31 @@
+## Video Processing Pipeline Usage
+
+There are three compiling target:
+1. MyImageApplication: the player
+2. MyEncoder
+3. MyDecoder
+
+These are temporary classes simply for testing usages.
+
+In order to test the full pipeline, you need to follow these steps:
+
+1. MyEncoder
+   1. Change the file path in the `main()` function.
+   2. Set build target to `MyEncoder` and compile.
+   3. Execute `MyEncoder.exe`.
+2. MyDecoder
+    1. Change the file path in the `main()` function.
+    2. Set build target to `MyDecoder` and compile.
+    3. Execute `MyDecoder.exe`.
+3. MyImageApplication
+   1. Set build target to `MyImageApplication` and compile.
+   2. Call corresponding parameters when you evoke the application. For example:
+
+```
+{ROOT}/MyImageApplication.exe {path to PROCESSEDxxx.rgb} {path to xxx.rgb} {path to xxx.wav} 960 540 30
+```
+
+---
 ## DCTCompressor Class
 
 To use the DCTCompressor class, you need to create its instance and use it.
