@@ -5,7 +5,7 @@
 #include <iostream>
 #include <sstream>
 
-const std::string DCTCompressor::COMPRESSED_FILE_NAME = "compressed_data.txt";
+// const std::string DCTCompressor::COMPRESSED_FILE_NAME = "compressed_data.txt";
 double dct_matrix[DCTCompressor::DCT_SIZE][DCTCompressor::DCT_SIZE];
 double dct_matrix_transpose[DCTCompressor::DCT_SIZE][DCTCompressor::DCT_SIZE];
 
@@ -110,7 +110,7 @@ void DCTCompressor::DCTLocalDecompressor(const int *compressed_local_data, const
 // quantization_factor coeff1 coeff2 … coeff64 coeff1 coeff2 … coeff64 coeff1 coeff2 … coeff64
 // …
 // r g b r g b r g b … r g b (The bottom blocks that cannot divided by 8)
-void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool *identifier, int foreground_compress_factor, int background_compress_factor) {
+void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool *identifier, int foreground_compress_factor, int background_compress_factor, std::string COMPRESSED_FILE_NAME) {
     std::ofstream output_file;
     output_file.open(COMPRESSED_FILE_NAME, std::ios::app);
 
@@ -122,6 +122,7 @@ void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool 
     int compressed_data[DCT_SIZE * DCT_SIZE];
     for (int i = 0; i < vertical_block_num; i++) {
         for (int j = 0; j < horizontal_block_num; j++) {
+            // int compress_factor = identifier[i * horizontal_block_num + j] ? foreground_compress_factor : background_compress_factor;
             int compress_factor = identifier[i * horizontal_block_num + j] ? foreground_compress_factor : background_compress_factor;
             int base_idx = i * WIDTH * DCT_SIZE + j * DCT_SIZE;
             output_file << compress_factor << " ";
@@ -150,7 +151,7 @@ void DCTCompressor::Compress(const std::vector<unsigned char> &data, const bool 
 }
 
 // format of rgb file: rgbrgbrgbrgb…
-void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result) {
+void DCTCompressor::Decompress(std::vector<std::vector<unsigned char>> &result, std::string COMPRESSED_FILE_NAME) {
     // Read the compressed data
     std::ifstream input_file;
     input_file.open(COMPRESSED_FILE_NAME);

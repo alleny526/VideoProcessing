@@ -64,7 +64,7 @@ private:
     size_t totalAudioSamples;
 
     // PortAudio Stream
-    PaStream *audioStream;
+    PaStream *audioStream = nullptr;
     PaStreamParameters outputParameters;
 
     // Buttons
