@@ -38,7 +38,7 @@ int main(int argc, char* argv[]) {
     // argv[1] = sample_file.rgb
     // argv[2] = sample_audio.wav
     std::string play_command = "./MyImageApplication " + argv[1] +
-                                " output.rgb" + argv[2] + " 960 540 30";
+                                " output.rgb " + argv[2] + " 960 540 30";
     
     std::cout << "Decompressing and preparing to play: " << play_command << std::endl;
     
