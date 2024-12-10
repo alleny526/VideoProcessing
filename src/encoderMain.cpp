@@ -209,8 +209,8 @@ void processVideoStream(const std::string& inputFile, const std::string& outputF
         }
         std::cout << frame_id++ << std::endl;
 
-        // 为节省时间，仅处理前50帧
-        if (frame_id > 50) break;
+        // // 为节省时间，仅处理前50帧
+        // if (frame_id > 50) break;
 
         const std::vector<unsigned char>& frame_data = image.getData();
 

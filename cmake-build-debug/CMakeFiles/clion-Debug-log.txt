@@ -41,6 +41,6 @@ CMake Deprecation Warning at dependency/wxWidgets/CMakeLists.txt:10 (cmake_minim
     Should wxWidgets be compiled into single library?  OFF
     Should wxWidgets be linked as a shared library?    ON
     Which wxWidgets API compatibility should be used?  3.2
--- Configuring done (0.2s)
+-- Configuring done (0.3s)
 -- Generating done (0.1s)
 -- Build files have been written to: /Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug

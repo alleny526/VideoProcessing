@@ -27,6 +27,9 @@ public:
         , int background_compress_factor
         , std::string COMPRESSED_FILE_NAME);
 
+    void DecompressFrameThread(int i, int total_frame_num, std::vector<std::vector<unsigned char>> &result,
+                               std::vector<std::vector<int>> &compressed_data, int lines_per_frame);
+
     /**
      * Decompresses the input data using DCT.
      * @param result The decompressed rgb files to memory. Initialize the vector as empty.

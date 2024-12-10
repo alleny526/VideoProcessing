@@ -4,6 +4,11 @@ project(ImageDisplay)
 
 set(CMAKE_CXX_STANDARD 17)
 
+set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+
 # Add source files
 set(PLAYERSOURCES
         manifest/MyImageApplication.rc

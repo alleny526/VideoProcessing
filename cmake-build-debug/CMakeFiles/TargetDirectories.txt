@@ -1,4 +1,6 @@
 /Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug/CMakeFiles/MyImageApplication.dir
+/Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug/CMakeFiles/MyEncoder.dir
+/Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug/CMakeFiles/MyDecoder.dir
 /Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug/CMakeFiles/edit_cache.dir
 /Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug/CMakeFiles/rebuild_cache.dir
 /Users/shuhancao/Desktop/24fall/576/CS576_Final_Project/cmake-build-debug/CMakeFiles/list_install_components.dir
