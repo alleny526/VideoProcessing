@@ -5,10 +5,21 @@ project(ImageDisplay)
 set(CMAKE_CXX_STANDARD 17)
 
 # Add source files
-set(SOURCES
-    src/Video2AudioPlayer.cpp
-    manifest/MyImageApplication.rc
+set(PLAYERSOURCES
+        manifest/MyImageApplication.rc
+        src/Video2AudioPlayer.cpp
+)
+
+# Add source files
+set(ENCODERSOURCES
         src/DCTCompressor.cpp
+        src/encoderMain.cpp
+)
+
+# Add source files
+set(DECODERSOURCES
+        src/DCTCompressor.cpp
+        src/decoderMain.cpp
 )
 
 if(WIN32)
@@ -26,7 +37,9 @@ add_subdirectory(dependency/portaudio)
 add_subdirectory(dependency/wxWidgets)
 
 # Create executable
-add_executable(MyImageApplication ${SOURCES})
+add_executable(MyImageApplication ${PLAYERSOURCES})
+add_executable(MyEncoder ${ENCODERSOURCES})
+add_executable(MyDecoder ${DECODERSOURCES})
 
 # X11 required on Linux
 if(UNIX AND NOT APPLE)
@@ -35,7 +48,7 @@ endif()
 
 # Specific Windows libraries
 if(WIN32)
-    target_link_libraries(MyImageApplication 
+    target_link_libraries(MyImageApplication
         wx::core 
         wx::base 
         portaudio_static 
@@ -45,7 +58,7 @@ if(WIN32)
     )
 else()
     # Link libraries for non-Windows platforms
-    target_link_libraries(MyImageApplication 
+    target_link_libraries(MyImageApplication
         wx::core 
         wx::base 
         portaudio_static 
