@@ -1,5 +1,16 @@
 ## Video Processing Pipeline Usage
 
+241210 updated: 
+
+Easier ways to use the project testing pipeline:
+
+1. Compile `MyImageApplication`, `MyEncoder` and `MyDecoder`.
+2. Modify all the paths and filenames in the scripts `process_video.sh` and `play_video.sh`.
+3. Call `process_video.sh` in the terminal.
+4. Call `play_video.sh` in the terminal.
+
+---
+
 There are three compiling target:
 1. MyImageApplication: the player
 2. MyEncoder
