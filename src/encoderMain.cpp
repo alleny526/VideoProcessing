@@ -77,10 +77,46 @@ std::vector<unsigned char> extractYChannel(const std::vector<unsigned char>& fra
 //    return g_channel;
 }
 
+void ApplyGaussianBlur(const std::vector<unsigned char>& input_frame,
+                       std::vector<unsigned char>& output_frame,
+                       int width, int height) {
+    // 定义高斯核，例如 3x3 的简单核
+    std::vector<std::vector<float>> gaussian_kernel = {
+            {1 / 16.0f, 2 / 16.0f, 1 / 16.0f},
+            {2 / 16.0f, 4 / 16.0f, 2 / 16.0f},
+            {1 / 16.0f, 2 / 16.0f, 1 / 16.0f}
+    };
+
+    output_frame.resize(input_frame.size());
+
+    // 遍历像素并进行卷积
+    for (int y = 1; y < height - 1; ++y) {
+        for (int x = 1; x < width - 1; ++x) {
+            float sum = 0.0f;
+
+            // 卷积计算
+            for (int ky = -1; ky <= 1; ++ky) {
+                for (int kx = -1; kx <= 1; ++kx) {
+                    int pixel_x = x + kx;
+                    int pixel_y = y + ky;
+                    int index = pixel_y * width + pixel_x;
+
+                    sum += input_frame[index] * gaussian_kernel[ky + 1][kx + 1];
+                }
+            }
+            output_frame[y * width + x] = static_cast<unsigned char>(std::clamp(sum, 0.0f, 255.0f));
+        }
+    }
+}
+
 // 运动向量结构
 struct MotionVector {
     float dx;
     float dy;
+
+    bool IsNearlyZero(float epsilon = 2.5f) const {
+        return std::abs(dx) < epsilon && std::abs(dy) < epsilon;
+    }
 };
 
 // 计算向量模长
@@ -137,7 +173,11 @@ MotionVector ComputeMotionVector(const std::vector<unsigned char>& block,
                         mad += std::abs(block[x * block_size + y] -
                                         previous_frame[prev_x * width + prev_y]);
                     }
+
+                    // early-stop
+                    if (mad >= min_mad) break;
                 }
+                if (mad >= min_mad) break;
             }
 
             if (mad < min_mad) {
@@ -225,6 +265,100 @@ MotionVector ComputeMotionVector_TSS(const std::vector<unsigned char>& block,
     return best_vector;
 }
 
+MotionVector ComputeMotionVector_Optimized(
+        const std::vector<unsigned char>& block,
+        const std::vector<unsigned char>& previous_frame,
+        int block_x, int block_y,
+        int width, int height, int block_size, int search_range) {
+
+    int center_dx = 0;
+    int center_dy = 0;
+    int step_size = std::max(1, search_range / 2); // 初始步长至少为 1
+    int min_mad = std::numeric_limits<int>::max();
+
+    // 中心点的坐标
+    int block_start_x = block_x * block_size;
+    int block_start_y = block_y * block_size;
+
+    MotionVector best_vector = {0, 0};
+
+    // 阶段 1: 使用 TSS 方法快速收敛
+    while (step_size >= 1) {
+        bool updated = false;
+        for (int dx = -step_size; dx <= step_size; dx += step_size) {
+            for (int dy = -step_size; dy <= step_size; dy += step_size) {
+                int mad = 0;
+
+                // 遍历当前块的像素，计算 MAD
+                for (int x = 0; x < block_size; ++x) {
+                    for (int y = 0; y < block_size; ++y) {
+                        int current_x = block_start_x + x;
+                        int current_y = block_start_y + y;
+                        int prev_x = current_x + center_dx + dx;
+                        int prev_y = current_y + center_dy + dy;
+
+                        int current_pixel = block[y * block_size + x];
+                        int previous_pixel = GetPixelValue(previous_frame, prev_x, prev_y, width, height);
+                        mad += std::abs(current_pixel - previous_pixel);
+
+                        // 提前终止策略：如果当前 MAD 已经超过最小值，直接跳出循环
+                        if (mad >= min_mad) break;
+                    }
+                    if (mad >= min_mad) break;
+                }
+
+                // 更新最优点
+                if (mad < min_mad) {
+                    min_mad = mad;
+                    best_vector = {float(center_dx + dx), float(center_dy + dy)};
+                    updated = true;
+                }
+            }
+        }
+
+        // 更新中心点
+        if (updated) {
+            center_dx = static_cast<int>(best_vector.dx);
+            center_dy = static_cast<int>(best_vector.dy);
+        }
+
+        // 减小步长
+        step_size /= 2;
+    }
+
+    // 阶段 2: 在步长为 1 时进行局部全搜索（精细搜索）
+    for (int dx = -1; dx <= 1; ++dx) {
+        for (int dy = -1; dy <= 1; ++dy) {
+            int mad = 0;
+
+            for (int x = 0; x < block_size; ++x) {
+                for (int y = 0; y < block_size; ++y) {
+                    int current_x = block_start_x + x;
+                    int current_y = block_start_y + y;
+                    int prev_x = current_x + center_dx + dx;
+                    int prev_y = current_y + center_dy + dy;
+
+                    int current_pixel = block[y * block_size + x];
+                    int previous_pixel = GetPixelValue(previous_frame, prev_x, prev_y, width, height);
+                    mad += std::abs(current_pixel - previous_pixel);
+
+                    // 提前终止策略：如果当前 MAD 已经超过最小值，直接跳出循环
+                    if (mad >= min_mad) break;
+                }
+                if (mad >= min_mad) break;
+            }
+
+            // 更新最优点
+            if (mad < min_mad) {
+                min_mad = mad;
+                best_vector = {float(center_dx + dx), float(center_dy + dy)};
+            }
+        }
+    }
+
+    return best_vector;
+}
+
 void ComputeMotionVectors_TSS(const std::vector<unsigned char>& frame,
                               const std::vector<unsigned char>& previous_frame,
                               std::vector<std::vector<MotionVector>>& motion_vectors,
@@ -245,7 +379,8 @@ void ComputeMotionVectors_TSS(const std::vector<unsigned char>& frame,
             }
 
             // 调用三步搜索
-            motion_vectors[i][j] = ComputeMotionVector_TSS(block, previous_frame, j, i, width, height, block_size, search_range);
+//            motion_vectors[i][j] = ComputeMotionVector_TSS(block, previous_frame, j, i, width, height, block_size, search_range);
+            motion_vectors[i][j] = ComputeMotionVector_Optimized(block, previous_frame, j, i, width, height, block_size, search_range);
         }
     }
 }
@@ -261,6 +396,8 @@ MotionVector ComputeDominantMotionVector(const std::vector<std::vector<MotionVec
     int rows = motion_vectors.size();
     int cols = motion_vectors[0].size();
 
+    int small_cnt = 0;
+
     // 构建方向直方图
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
@@ -268,9 +405,10 @@ MotionVector ComputeDominantMotionVector(const std::vector<std::vector<MotionVec
 
             // 计算幅值
             float magnitude = std::sqrt(mv.dx * mv.dx + mv.dy * mv.dy);
-//            if (magnitude < magnitude_threshold) {
-//                continue; // 忽略过小的运动向量
-//            }
+            if (magnitude < magnitude_threshold) {
+                ++small_cnt;
+                continue; // 忽略过小的运动向量
+            }
 
             // 避免过大的异常值影响
             if (magnitude >= 12.f) {
@@ -288,6 +426,10 @@ MotionVector ComputeDominantMotionVector(const std::vector<std::vector<MotionVec
             direction_histogram[bin_index]++;
             vector_bins[bin_index].push_back(mv);
         }
+    }
+
+    if (small_cnt > .5f * rows * cols) {
+        return {0.f, 0.f};
     }
 
     // 找到最多向量的方向区间
@@ -396,19 +538,25 @@ void DetectForeground(const std::vector<std::vector<MotionVector>>& motion_vecto
 
     // Step 2: 计算主导运动矢量
     MotionVector dominant_vector = ComputeDominantMotionVector(motion_vectors);
+    bool bIsStatic = dominant_vector.IsNearlyZero();
 
     // Step 3: 标记背景区域
     for (int i = 0; i < rows; ++i) {
         for (int j = 0; j < cols; ++j) {
             const MotionVector& mv = motion_vectors[i][j];
 
+            float magnitude_diff = std::abs(VectorMagnitude(mv) - VectorMagnitude(dominant_vector));
+
+            if (bIsStatic) {
+                background_mask[i][j] = magnitude_diff <= magnitude_threshold;
+                continue;
+            }
+
             // 计算与主导矢量的方向差和幅值差
             float direction_diff = std::abs(VectorDirection(mv) - VectorDirection(dominant_vector));
             if (direction_diff > M_PI) {
                 direction_diff = 2 * M_PI - direction_diff; // 归一化到 [0, π]
             }
-
-            float magnitude_diff = std::abs(VectorMagnitude(mv) - VectorMagnitude(dominant_vector));
 
             // 判断是否为背景
             if (direction_diff <= direction_threshold && magnitude_diff <= magnitude_threshold) {
@@ -609,14 +757,55 @@ void Map16x16To8x8(const std::vector<std::vector<bool>>& mask_16x16,
     }
 }
 
+//============
+
+void ComputePixelDifference(const std::vector<unsigned char>& current_frame,
+                            const std::vector<unsigned char>& previous_frame,
+                            std::vector<std::vector<bool>>& pixel_diff_mask,
+                            int width, int height) {
+    pixel_diff_mask.resize(height, std::vector<bool>(width, false));
+
+    // 动态阈值 (可根据亮度动态调整)
+    int threshold = 15; // 示例固定值，动态可以基于亮度分布计算
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            int index = y * width + x;
+            int diff = std::abs(current_frame[index] - previous_frame[index]);
+
+            threshold = current_frame[index] > 200 ? 30
+                                            : current_frame[index] > 100 ? 20
+                                                                  : 10;
+
+            if (diff > threshold) {
+                pixel_diff_mask[y][x] = true;
+            }
+        }
+    }
+}
+
+void FuseForegroundMasks(const std::vector<std::vector<bool>>& pixel_diff_mask,
+                         const std::vector<std::vector<bool>>& motion_vector_mask,
+                         std::vector<std::vector<bool>>& fused_mask,
+                         int width, int height) {
+    fused_mask.resize(motion_vector_mask.size(), std::vector<bool>(motion_vector_mask[0].size(), false));
+
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            // 融合策略：交集为强前景，并集为弱前景
+            if (y / 16 >= motion_vector_mask.size() || x / 16 >= motion_vector_mask[0].size()) break;
+            if (pixel_diff_mask[y][x] && motion_vector_mask[y / 16][x / 16]) {
+                fused_mask[y / 16][x / 16] = true;
+            }
+        }
+    }
+}
 
 // 主接口
 void IsForeground(const std::vector<unsigned char>& pre_frame_data,
                   const std::vector<unsigned char>& frame_data,
                   bool* identifier, int width, int height) {
-    // 8 16 ok一半
     int block_size = 16;
-//    int block_size = 8;
     int search_range = 16;
 
     std::vector<std::vector<std::vector<unsigned char>>> blocks;
@@ -625,13 +814,26 @@ void IsForeground(const std::vector<unsigned char>& pre_frame_data,
     std::vector<std::vector<bool>> moving_background_mask;
     std::vector<std::vector<bool>> foreground_mask;
 
+    std::vector<unsigned char> filtered_frame_data;
+    std::vector<unsigned char> filtered_pre_frame_data;
+    ApplyGaussianBlur(frame_data, filtered_frame_data, width, height);
+    ApplyGaussianBlur(pre_frame_data, filtered_pre_frame_data, width, height);
+
+    // Step 2: 像素差分
+    std::vector<std::vector<bool>> pixel_diff_mask;
+    ComputePixelDifference(filtered_frame_data, filtered_pre_frame_data, pixel_diff_mask, width, height);
+
+    //=====
+
     // Step 1: 分块处理
 //    DivideIntoBlocks(frame_data, blocks, width, height, block_size);
+    DivideIntoBlocks(filtered_frame_data, blocks, width, height, block_size);
 
     // Step 2: 计算运动向量
 //    ComputeMotionVectors(blocks, pre_frame_data, motion_vectors, width, height, block_size, search_range);
+    ComputeMotionVectors(blocks, filtered_pre_frame_data, motion_vectors, width, height, block_size, search_range);
 //    ComputeMotionVectors_TSS(blocks, pre_frame_data, motion_vectors, width, height, block_size, search_range);
-    ComputeMotionVectors_TSS(frame_data, pre_frame_data, motion_vectors, width, height, block_size, search_range);
+//    ComputeMotionVectors_TSS(frame_data, pre_frame_data, motion_vectors, width, height, block_size, search_range);
 
     // Step 3: 检测静止背景和移动背景
 //    DetectStaticBackground(motion_vectors, static_mask);
@@ -642,13 +844,19 @@ void IsForeground(const std::vector<unsigned char>& pre_frame_data,
     DetectForeground(motion_vectors, foreground_mask); // 前景初筛
     RefineForeground(motion_vectors, foreground_mask, 10);
 
+    //=====
+    // Step 4: 融合前景检测
+    std::vector<std::vector<bool>> foreground_mask_res;
+    FuseForegroundMasks(pixel_diff_mask, foreground_mask, foreground_mask_res, width, height);
 
     // Step 5: 后处理
-    PostProcessing(foreground_mask);
+//    PostProcessing(foreground_mask);
+    PostProcessing(foreground_mask_res);
 
     std::vector<std::vector<bool>> foreground_mask_8x8;
     // Step 5: 将 16x16 掩码映射到 8x8 分辨率
-    Map16x16To8x8(foreground_mask, foreground_mask_8x8, width, height, 8, block_size);
+//    Map16x16To8x8(foreground_mask, foreground_mask_8x8, width, height, 8, block_size);
+    Map16x16To8x8(foreground_mask_res, foreground_mask_8x8, width, height, 8, block_size);
 
 
     // 输出结果到identifier
@@ -691,7 +899,7 @@ void processVideoStream(const std::string& inputFile, const std::string& outputF
         std::cout << frame_id++ << std::endl;
 
         // 为节省时间，仅处理前30帧
-//        if (frame_id > 100) break;
+//        if (frame_id > 400) break;
 
         const std::vector<unsigned char>& frame_data = image.getData();
 
@@ -720,24 +928,35 @@ void processVideoStream(const std::string& inputFile, const std::string& outputF
     inputStream.close();
 }
 
-int main() {
+int main(int argc, char* argv[]) {
+
     // 假设输入和输出文件
 //    const std::string VIDEO_NAME = "WalkingStaticBackground";
+//    const std::string VIDEO_NAME = "Village";
 //    const std::string VIDEO_NAME = "WalkingMovingBackground";
-//    const std::string VIDEO_NAME = "SAL";
+//    std::string VIDEO_NAME = "SAL";
 //    const std::string VIDEO_NAME = "Stairs";
 //    const std::string VIDEO_NAME = "Village";
 //    const std::string VIDEO_NAME = "orange";
-    const std::string VIDEO_NAME = "car";
+//    const std::string VIDEO_NAME = "car";
 
-    std::string ROOT_DIRECTORY = "../assets/rgbs/";
-    std::string OUTPUT_DIRECTORY = "../assets/outputs/";
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <VIDEO_NAME>" << std::endl;
+        return 1;
+    }
+    std::string VIDEO_NAME = argv[1];
+
+    std::string ROOT_DIRECTORY = "assets/rgbs/";
+//    std::string ROOT_DIRECTORY = "../assets/rgbs/";
+    std::string OUTPUT_DIRECTORY = "assets/outputs/";
+//    std::string OUTPUT_DIRECTORY = "../assets/outputs/";
     std::string inputFile = ROOT_DIRECTORY + VIDEO_NAME + ".rgb";
     std::string outputFile = OUTPUT_DIRECTORY + VIDEO_NAME + ".cmp";
 
     // 图像的宽度和高度
     int width = 960;
     int height = 540;
+//    height = 1696;
 
     // 压缩因子
     int foreground_compress_factor = 0;
