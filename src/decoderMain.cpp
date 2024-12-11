@@ -6,12 +6,6 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
-#include <cmath>
-#include <cstring>
-#include <queue>
-
-// temporary
-#include <filesystem>
 
 // inner
 #include "DCTCompressor.h"
@@ -38,17 +32,24 @@ void decoderMain(const std::vector<std::vector<unsigned char>>& result, const st
     std::cout << "Decoded RGB data written to: " << output_rgb_file << std::endl;
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     // 假设输入和输出文件
 //    const std::string VIDEO_NAME = "WalkingStaticBackground";
+//    const std::string VIDEO_NAME = "Village";
 //    const std::string VIDEO_NAME = "WalkingMovingBackground";
 //    const std::string VIDEO_NAME = "SAL";
 //    const std::string VIDEO_NAME = "Stairs";
 //    const std::string VIDEO_NAME = "Village";
 //    const std::string VIDEO_NAME = "orange";
-    const std::string VIDEO_NAME = "car";
+//    const std::string VIDEO_NAME = "car";
+    if (argc < 2) {
+        std::cerr << "Usage: " << argv[0] << " <VIDEO_NAME>" << std::endl;
+        return 1;
+    }
+    std::string VIDEO_NAME = argv[1];
 
-    std::string ROOT_DIRECTORY = "../assets/outputs/";
+//    std::string ROOT_DIRECTORY = "../assets/outputs/";
+    std::string ROOT_DIRECTORY = "assets/outputs/";
     std::string inputFile = ROOT_DIRECTORY + VIDEO_NAME + ".cmp";
     std::string outputFile = ROOT_DIRECTORY + "PROCESSED_" + VIDEO_NAME + ".rgb";
 
