@@ -1,59 +1,42 @@
-## Encoder Template
+## Video Processing Pipeline Usage
 
-```cpp
-# include "DCTCompressor.h"
+241210 updated: 
 
-int main() {
-    int n1, n2;  // read from the command line
-    
-    int frame_number;  // compute number of frames
-    
-    unsigned char **data = ReadImageFromAllen("input.rgb");  // data[i] is the i-th frame
-    
-    bool **identifier = SegmentFromCheng(data);  // read raw data and return the foreground/background identifier
-    
-    DCTCompressor compressor;
+Easier ways to use the project testing pipeline:
 
-    for (int i = 0; i < frame_number; i++) {
-        compressor.Compress(data[i], identifier[i], n1, n2);  // compress the i-th frame with n1 and n2
-    }
-    
-    return 0;
-}
+1. Compile `MyImageApplication`, `MyEncoder` and `MyDecoder`.
+2. Modify all the paths and filenames in the scripts `process_video.sh` and `play_video.sh`.
+3. Call `process_video.sh` in the terminal.
+4. Call `play_video.sh` in the terminal.
+
+---
+
+There are three compiling target:
+1. MyImageApplication: the player
+2. MyEncoder
+3. MyDecoder
+
+These are temporary classes simply for testing usages.
+
+In order to test the full pipeline, you need to follow these steps:
+
+1. MyEncoder
+   1. Change the file path in the `main()` function.
+   2. Set build target to `MyEncoder` and compile.
+   3. Execute `MyEncoder.exe`.
+2. MyDecoder
+    1. Change the file path in the `main()` function.
+    2. Set build target to `MyDecoder` and compile.
+    3. Execute `MyDecoder.exe`.
+3. MyImageApplication
+   1. Set build target to `MyImageApplication` and compile.
+   2. Call corresponding parameters when you evoke the application. For example:
+
+```
+{ROOT}/MyImageApplication.exe {path to PROCESSEDxxx.rgb} {path to xxx.rgb} {path to xxx.wav} 960 540 30
 ```
 
-## Decoder Template
-
-```cpp
-# include "DCTCompressor.h"
-# include <cstdlib>
-# include <iostream>
-
-int main(int argc, char* argv[]) {
-    DCTCompressor compressor;
-    compressor.Decompress("output.rgb");  // decompressed vedio stored in output.rgb in the format suitable for the player.
-    
-    // Code to call the player to play output.rgb
-    // Construct command to play decoded video
-    // argv[1] = sample_file.rgb
-    // argv[2] = sample_audio.wav
-    std::string play_command = "./MyImageApplication " + argv[1] +
-                                " output.rgb " + argv[2] + " 960 540 30";
-    
-    std::cout << "Decompressing and preparing to play: " << play_command << std::endl;
-    
-    // Execute the video player with decoded file
-    int result = system(play_command.c_str());
-    
-    if (result != 0) {
-        std::cerr << "Failed to play decoded video" << std::endl;
-        return 1;
-    }
-    
-    return 0;
-}
-```
-
+---
 ## DCTCompressor Class
 
 To use the DCTCompressor class, you need to create its instance and use it.
@@ -89,15 +72,14 @@ r g b r g b r g b … r g b (The bottom blocks that cannot be divided by 8)
 Decompress the compressed data from file ```compressed_data.txt```.
 
 ``` cpp
-void Decompress(std::string file_name);
+void Decompress(std::vector<std::vector<unsigned char>> &result);
 ```
 
-- file_name: the file to store the output rgb data.
+- result: should be an empty vector, the decompressed data will be stored in this vector after calling this method. ```result[i]``` is the i-th frame of the decompressed data.
 
 The decompressed data will be stored in the same format as the input data, ie, 
 ```aiignore
 result[i] = {r1, g1, b1, r2, g2, b2, …, rN, gN, bN}
 ```
 
-Finally, you can use the Video player to play the rgb file.
 
